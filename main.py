@@ -1,19 +1,26 @@
 #!/usr/bin/env python3
 from tkinter import Tk, Frame, Text, Entry, Button, TOP, LEFT, RIGHT, BOTH, X, END
+from socket import socket, AF_INET, SOCK_STREAM
+from threading import Thread
 
 class TelnetClient:
     def __init__(self, callback, host=None, port=None):
         self.host = host
         self.port = port
         self.callback = callback
+        self.socket = socket(AF_INET, SOCK_STREAM)
+    def handleMsg(self):
+        while True:
+            self.callback(self.socket.recv(2**10))
     def handle(self):
         if self.host is None:
-            self.callback('Please type the address of the server.\n')
+            self.callback(b'Please type the address of the server.\n')
         elif self.port is None:
-            self.callback('Please type the port number.\n')
+            self.callback(b'Please type the port number.\n')
         else:
-            # TODO: run a thread with receiving messages
-            pass
+            self.socket.connect((self.host, self.port))
+            self.thread = Thread(target=self.handleMsg, daemon=True)
+            self.thread.start()
     def send(self, msg):
         if self.host is None:
             self.host = msg
@@ -22,10 +29,10 @@ class TelnetClient:
             try:
                 self.port = int(msg)
             except ValueError:
-                self.callback('The port number should be an integer value.\n')
+                self.callback(b'The port number should be an integer value.\n')
             self.handle()
         else:
-            # TODO: send a message
+            self.socket.sendall(msg+b'\n')
             pass
 
 class TelnetCommunicator(Frame):
@@ -43,11 +50,11 @@ class TelnetCommunicator(Frame):
 
     def csend(self):
         s = self.wentry.get()
-        self.tc.send(s)
+        self.tc.send(s.encode())
         self.wentry.delete(0, END)
 
     def crecv(self, msg):
-        self.wtext.insert(END, msg)
+        self.wtext.insert(END, msg.decode())
 
 if __name__ == '__main__':
     tk = Tk()
