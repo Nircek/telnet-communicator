@@ -4,23 +4,39 @@ from socket import socket, AF_INET, SOCK_STREAM
 from threading import Thread
 
 class TelnetClient:
+    TYPE_ADDRESS = b'Please type the address of the server.\n'
+    TYPE_PORT = b'Please type the port number.\n'
+    PORT_IS_INT = b'The port number should be an integer value.\n'
+    DISCONNECTED = b'You are disconnected.\n'
+    RECONNECT = b'Reconnect? [y/n]\n'
     def __init__(self, callback, host=None, port=None):
         self.host = host
         self.port = port
         self.callback = callback
         self.socket = socket(AF_INET, SOCK_STREAM)
+        self.connected = False
     def handleMsg(self):
         while True:
-            self.callback(self.socket.recv(2**10))
+            s = self.socket.recv(2**10)
+            if s:
+                self.callback(s)
+            else:
+                self.connected = False
+                self.callback(self.DISCONNECTED+self.RECONNECT)
+                break
     def handle(self):
         if self.host is None:
-            self.callback(b'Please type the address of the server.\n')
+            self.callback(self.TYPE_ADDRESS)
         elif self.port is None:
-            self.callback(b'Please type the port number.\n')
+            self.callback(self.TYPE_PORT)
         else:
-            self.socket.connect((self.host, self.port))
-            self.thread = Thread(target=self.handleMsg, daemon=True)
-            self.thread.start()
+            try:
+                self.socket.connect((self.host, self.port))
+                self.connected = True
+                self.thread = Thread(target=self.handleMsg, daemon=True)
+                self.thread.start()
+            except ConnectionRefusedError:
+                self.callback(self.DISCONNECTED+self.RECONNECT)
     def send(self, msg):
         if self.host is None:
             self.host = msg
@@ -29,11 +45,18 @@ class TelnetClient:
             try:
                 self.port = int(msg)
             except ValueError:
-                self.callback(b'The port number should be an integer value.\n')
+                self.callback(self.PORT_IS_INT)
             self.handle()
+        elif not self.connected:
+            if msg == b'y':
+                self.handle()
+            elif msg == b'n':
+                self.host, self.port = None, None
+                self.handle()
+            else:
+                self.callback(self.RECONNECT)
         else:
             self.socket.sendall(msg+b'\n')
-            pass
 
 class TelnetCommunicator(Frame):
     def __init__(self, master):
