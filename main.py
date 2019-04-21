@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from tkinter import Tk, Frame, Text, Entry, Button, TOP, LEFT, RIGHT, BOTH, X, END
+from tkinter import Tk, Text, Entry, Button, TOP, LEFT, RIGHT, BOTH, X, END
 from socket import socket, AF_INET, SOCK_STREAM
 from threading import Thread
 
@@ -58,9 +58,9 @@ class TelnetClient:
         else:
             self.socket.sendall(msg+b'\n')
 
-class TelnetCommunicator(Frame):
-    def __init__(self, master):
-        super().__init__(master)
+class TelnetCommunicator(Tk):
+    def __init__(self):
+        super().__init__()
         self.wtext = Text(self, width=40, height=10)
         self.wentry = Entry(self)
         self.wentry.bind('<Return>', lambda x: self.csend())
@@ -70,6 +70,8 @@ class TelnetCommunicator(Frame):
         self.wsend.pack(side=RIGHT)
         self.tc = TelnetClient(self.crecv)
         self.tc.handle()
+        self.update()
+        self.minsize(self.winfo_width(), self.winfo_height())
 
     def csend(self):
         s = self.wentry.get()
@@ -80,9 +82,4 @@ class TelnetCommunicator(Frame):
         self.wtext.insert(END, msg.decode())
 
 if __name__ == '__main__':
-    tk = Tk()
-    tc = TelnetCommunicator(tk)
-    tc.pack(fill=BOTH, expand=1)
-    tk.update()
-    tk.minsize(tk.winfo_width(), tk.winfo_height())
-    tk.mainloop()
+    TelnetCommunicator().mainloop()
