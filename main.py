@@ -15,14 +15,17 @@ class TelnetClient:
         self.callback = callback
         self.socket = socket(AF_INET, SOCK_STREAM)
         self.connected = False
+    def disconnect(self):
+        self.connected = False
+        self.socket.close()
+        self.callback(self.DISCONNECTED+self.RECONNECT)
     def handleMsg(self):
-        while True:
+        while self.connected:
             s = self.socket.recv(2**10)
             if s:
                 self.callback(s)
             else:
-                self.connected = False
-                self.callback(self.DISCONNECTED+self.RECONNECT)
+                self.disconnect()
                 break
     def handle(self):
         if self.host is None:
@@ -72,7 +75,11 @@ class TelnetCommunicator(Tk):
         self.tc.handle()
         self.update()
         self.minsize(self.winfo_width(), self.winfo_height())
+        self.protocol("WM_DELETE_WINDOW", self.winClose)
 
+    def winClose(self):
+        self.tc.disconnect()
+        self.destroy()
     def csend(self):
         s = self.wentry.get()
         self.tc.send(s.encode())
