@@ -3,6 +3,18 @@ from tkinter import Tk, Text, Entry, Button, TOP, LEFT, RIGHT, BOTH, X, END
 from socket import socket, AF_INET, SOCK_STREAM
 from threading import Thread
 
+def decodeBytes(b):
+    buf = ''
+    while b:
+        try:
+            buf += b.decode()
+            b = ''
+        except UnicodeDecodeError as e:
+            buf += b[:e.start].decode()
+            buf += '\\x'+hex(b[e.start])[2:].upper()
+            b = b[e.start+1:]
+    return buf
+
 class TelnetClient:
     TYPE_ADDRESS = b'Please type the address of the server.\n'
     TYPE_PORT = b'Please type the port number.\n'
@@ -86,7 +98,7 @@ class TelnetCommunicator(Tk):
         self.wentry.delete(0, END)
 
     def crecv(self, msg):
-        self.wtext.insert(END, msg.decode())
+        self.wtext.insert(END, decodeBytes(msg))
 
 if __name__ == '__main__':
     TelnetCommunicator().mainloop()
